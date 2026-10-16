@@ -6,7 +6,8 @@ This repository hosts comprehensive analysis and statistics of Boost C++ Library
 
 ```
 .
-├── index.html              # Version selector (root landing page)
+├── index.html              # Version selector (root landing page of /boost/)
+├── home/                   # Insights homepage, served at the host root (not under /boost/)
 ├── v1.90/                  # Boost 1.90 analysis
 │   ├── index.html          # Main dashboard
 │   ├── bsl_analysis.html   # BSL-1.0 license analysis
@@ -20,6 +21,10 @@ This repository hosts comprehensive analysis and statistics of Boost C++ Library
 │   └── ...
 └── _config.yml             # Jekyll configuration
 ```
+
+## Homepage
+
+`home/` holds the Insights homepage that links to `/boost/` and `/weblate/`. It is served at the root of the host by a second nginx virtual host and is not reachable under `/boost/`. See `home/README.md` and Part 3b of `deploy.md`.
 
 ## Adding a New Version
 

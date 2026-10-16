@@ -2,6 +2,8 @@
 
 This repository is served as a static site from a Docker container on a cloud server (e.g., GCP), accessible at `dev.cppdigest.org/boost/`. GitHub Pages remains active solely to redirect legacy visitors to the new URL.
 
+> **Hostnames.** `dev.cppdigest.org` now redirects to `staging.insights.cppalliance.org`. The production host is `insights.cppalliance.org`. Where this guide names `dev.cppdigest.org`, read the staging host.
+
 ## Overview
 
 ```
@@ -25,6 +27,7 @@ The site content lives in a git clone at `/opt/boost` on the server. An nginx Do
 | `.github/workflows/pages.yml` | GitHub Pages workflow — deploys redirect-only artifact when `index.html` or `404.html` change |
 | `index.html` | Root page — contains a hostname-conditional redirect for GitHub Pages visitors |
 | `404.html` | GitHub Pages 404 handler — redirects deep-linked legacy URLs to their GCP equivalents |
+| `home/` | The Insights homepage, served at the host root through a second nginx virtual host (see Part 3b) |
 
 ---
 
@@ -135,6 +138,78 @@ curl https://dev.cppdigest.org/boost/
 
 ---
 
+## Part 3b — Homepage at the host root (one-time per host)
+
+The repository also holds a small homepage in `home/`. It is served at the root of each host (`https://insights.cppalliance.org/` and `https://staging.insights.cppalliance.org/`) and never under `/boost/`.
+
+```
+host nginx
+  = /    ^~ /assets/    = /robots.txt  →  127.0.0.1:9102, Host: insights-home.internal  →  container virtual host "home"     →  /usr/share/nginx/html/home
+  /boost/                               →  127.0.0.1:9102, Host: $host (as in Part 3)    →  container default virtual host  →  /usr/share/nginx/html
+```
+
+- `nginx.conf` defines two virtual hosts. The default one serves the repository root as before and answers 404 for `/home/`. The second one, `insights-home.internal`, serves `home/` and answers only for `/`, `/assets/` and `/robots.txt`.
+- The homepage's response headers (cache, `nosniff`, referrer policy, `frame-ancestors`) are set in `nginx.conf`, so the host nginx needs no `add_header` lines.
+- Do not change `proxy_set_header Host $host` in the `/boost/` block. A client that forges `Host: insights-home.internal` can make the host nginx show it the homepage at `/boost/`. That client sees only public content.
+
+Add these blocks inside the same `server` block as the `/boost/` block (the one that listens on 443):
+
+```nginx
+location = / {
+    proxy_pass http://127.0.0.1:9102;
+    proxy_set_header Host insights-home.internal;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+}
+
+location ^~ /assets/ {
+    proxy_pass http://127.0.0.1:9102;
+    proxy_set_header Host insights-home.internal;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+}
+
+location = /robots.txt {
+    proxy_pass http://127.0.0.1:9102;
+    proxy_set_header Host insights-home.internal;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+}
+```
+
+- `proxy_pass` has no URI part, so nginx forwards the original path unchanged. This differs from `/boost/`, which strips its prefix.
+- `=` and `^~` locations win over regex locations, so a rule such as `location ~* \.(css|js)$` cannot intercept `/assets/`.
+- Nothing else may use `/assets/` or `/robots.txt` at the host root.
+
+Staging only, to keep it out of search results: add `add_header X-Robots-Tag "noindex, nofollow" always;` to the first two blocks, and replace the `/robots.txt` block with:
+
+```nginx
+location = /robots.txt {
+    default_type text/plain;
+    return 200 "User-agent: *\nDisallow: /\n";
+}
+```
+
+Order of steps for a host:
+
+1. Merge the change to `main`. `deploy.yml` pulls it and, because `nginx.conf` changed, rebuilds the container.
+2. On the server, check the container before touching the host nginx:
+   ```bash
+   curl -s -H 'Host: insights-home.internal' http://127.0.0.1:9102/ | grep -o '<title>[^<]*</title>'   # C++ Alliance Insights
+   curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:9102/home/                               # 404
+   ```
+3. Add the blocks above, then `sudo nginx -t && sudo systemctl reload nginx`.
+4. From outside (use the staging host name for staging):
+   ```bash
+   H=https://insights.cppalliance.org
+   for p in / /assets/home.css /assets/home.js /assets/logo.svg /robots.txt /boost/ /weblate/; do printf '%-18s ' $p; curl -s -o /dev/null -w '%{http_code}\n' $H$p; done   # all 200
+   for p in /boost/home/ /boost/home/index.html /boost/assets/home.css; do printf '%-26s ' $p; curl -s -o /dev/null -w '%{http_code}\n' $H$p; done                 # all 404
+   ```
+
+Rollback: remove the three blocks and reload nginx; the default page returns. To remove the container side as well, revert the commit and let `deploy.yml` rebuild.
+
+---
+
 ## Part 4 — Continuous Deployment
 
 After the one-time setup above, all future deployments are automatic.
@@ -207,6 +282,8 @@ After completing all steps above, run through this checklist:
 4. Visit `https://cppdigest.github.io/` and confirm it redirects to `https://dev.cppdigest.org/boost/`
 5. Visit `https://cppdigest.github.io/v1.90/` and confirm it redirects to `https://dev.cppdigest.org/boost/v1.90/`
 6. Test manual dispatch: go to **Actions → Deploy to GCP → Run workflow**
+7. Browse to the host root (`https://insights.cppalliance.org/`) and confirm the Insights homepage shows, with links to `/boost/` and `/weblate/`
+8. Browse to `/boost/` and confirm it still shows the version selector, and that `/boost/home/` returns 404
 
 ---
 
