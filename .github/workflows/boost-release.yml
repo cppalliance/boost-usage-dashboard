@@ -63,12 +63,28 @@ jobs:
           cp -r develop/ "$DIR/"
           echo "Copied develop/ → $DIR/"
 
+      - name: Update versions.json
+        if: steps.detect.outputs.is_new == 'true'
+        run: |
+          # The version selector (index.html) reads this file instead of calling the
+          # GitHub API, so the list always comes from the repository that serves it.
+          # List the v<major>.<minor> folders newest first. The numeric sort puts
+          # v1.100 after v1.99.
+          versions=$(find . -maxdepth 1 -type d -regextype posix-extended -regex './v[0-9]+\.[0-9]+' -printf '%f\n' \
+            | sort -t. -k1.2,1nr -k2,2nr)
+          if [ -d develop ]; then develop=true; else develop=false; fi
+          printf '%s\n' "$versions" | jq -R -s --argjson develop "$develop" '
+            split("\n") | map(select(length > 0)) as $v
+            | {develop: $develop, latest: ($v[0] // null), versions: $v}' > versions.json
+          cat versions.json
+          test "$(jq '.versions | length' versions.json)" -gt 0
+
       - name: Commit and push
         if: steps.detect.outputs.is_new == 'true'
         run: |
           DIR="${{ steps.detect.outputs.dir }}"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add "$DIR/"
+          git add "$DIR/" versions.json
           git commit -m "Add $DIR (snapshot from develop)"
           git push
