@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>C++ Alliance Insights</title>
+  <meta name="description" content="Public dashboards and community tools from the C++ Alliance: Boost library usage statistics and Boost documentation translation.">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#081830">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; base-uri 'none'; form-action 'none'; object-src 'none'">
+  <link rel="canonical" href="https://insights.cppalliance.org/">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="C++ Alliance Insights">
+  <meta property="og:title" content="C++ Alliance Insights">
+  <meta property="og:description" content="Public dashboards and community tools from the C++ Alliance: Boost library usage statistics and Boost documentation translation.">
+  <meta property="og:url" content="https://insights.cppalliance.org/">
+  <link rel="icon" type="image/svg+xml" href="/assets/logo.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap">
+  <link rel="stylesheet" href="/assets/home.css">
+  <script src="/assets/home.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="masthead">
+    <div class="masthead-inner">
+      <a class="brand" href="/" aria-label="C++ Alliance Insights, home">
+        <img class="brand-logo" src="/assets/logo.svg" width="61" height="56" alt="">
+      </a>
+      <div class="brand-text">
+        <h1 class="brand-title">C++ Alliance Insights</h1>
+        <p class="brand-sub">Open dashboards and tools for the Boost and C++ community</p>
+      </div>
+      <button type="button" class="theme-toggle" id="theme-toggle">
+        <svg class="icon-moon" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M13.6 9.9A5.9 5.9 0 0 1 6.1 2.4a5.9 5.9 0 1 0 7.5 7.5z"/></svg>
+        <svg class="icon-sun" viewBox="0 0 16 16" aria-hidden="true" focusable="false" hidden><circle cx="8" cy="8" r="3.25"/><path d="M8 1v1.5M8 13.5V15M15 8h-1.5M2.5 8H1M12.95 3.05l-1.06 1.06M4.11 11.89l-1.06 1.06M12.95 12.95l-1.06-1.06M4.11 4.11 3.05 3.05"/></svg>
+        <span class="theme-toggle-label">Switch to dark theme</span>
+      </button>
+    </div>
+  </header>
+
+  <main id="main" tabindex="-1">
+    <div class="wrap">
+      <section class="intro" aria-label="About this site">
+        <p class="lead">These tools are built and run by the C++ Alliance to help the Boost and wider C++ community see how its libraries are used and read its documentation in more languages.</p>
+      </section>
+
+      <section class="projects" aria-labelledby="projects-heading">
+        <h2 class="section-label" id="projects-heading">Projects</h2>
+        <ul class="cards">
+          <li class="card">
+            <div class="card-head">
+              <span class="card-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M5 20v-9M12 20V5M19 20v-6M3 20h18"/></svg>
+              </span>
+              <code class="path-chip">/boost/</code>
+            </div>
+            <h3 class="card-title"><a class="card-link" href="/boost/">Boost Library Usage Analysis</a></h3>
+            <p class="card-text">How Boost libraries are used across GitHub repositories: library popularity, repository analysis and BSL-1.0 license adoption, for the development branch and recent releases.</p>
+            <ul class="card-links">
+              <li><a href="/boost/develop/">Development version</a></li>
+            </ul>
+            <span class="card-cta" aria-hidden="true">Open &rarr;</span>
+          </li>
+
+          <li class="card">
+            <div class="card-head">
+              <span class="card-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3.2 3 14.8 0 18M12 3c-3 3.2-3 14.8 0 18"/></svg>
+              </span>
+              <code class="path-chip">/weblate/</code>
+            </div>
+            <h3 class="card-title"><a class="card-link" href="/weblate/">Boost-Weblate</a></h3>
+            <p class="card-text">Translate Boost documentation into your language. Browse projects, languages and translation progress, or sign in to contribute.</p>
+            <ul class="card-links">
+              <li><a href="/weblate/projects/">Projects</a></li>
+              <li><a href="/weblate/languages/">Languages</a></li>
+              <li><a href="/weblate/about/">About</a></li>
+            </ul>
+            <span class="card-cta" aria-hidden="true">Open &rarr;</span>
+          </li>
+        </ul>
+      </section>
+    </div>
+
+    <section class="support" aria-labelledby="support-heading">
+      <div class="support-inner">
+        <img class="support-logo" src="/assets/logo.svg" width="87" height="80" alt="">
+        <div>
+          <h2 id="support-heading">Supported by the C++ Alliance</h2>
+          <p>The C++ Alliance is a 501(c)(3) non-profit that supports the Boost C++ Libraries and the wider C++ community through libraries, community, standards and education.</p>
+          <ul class="support-links">
+            <li><a href="https://cppalliance.org">The C++ Alliance</a></li>
+            <li><a href="https://www.boost.org">Boost C++ Libraries</a></li>
+            <li><a href="https://github.com/CPPAlliance">GitHub</a></li>
+            <li><a href="https://cppalliance.org/#contact">Contact</a></li>
+          </ul>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+      <p class="footer-line">Insights is a project of the C++ Alliance. &copy; 2026 The C Plus Plus Alliance, Inc.</p>
+    </div>
+  </footer>
+</body>
+</html>
