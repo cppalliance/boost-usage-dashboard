@@ -1,13 +1,15 @@
 # Boost Library Usage Analysis
 
-This repository hosts comprehensive analysis and statistics of Boost C++ Library usage across GitHub repositories, organized by Boost version.
+This repository hosts analysis and statistics of Boost C++ Library usage across GitHub repositories, organized by Boost version. It is served at `/boost/` on each host; `deploy.md` describes the environments and how they are deployed.
 
 ## Repository Structure
 
 ```
 .
-├── index.html              # Version selector (root landing page of /boost/)
+├── index.html              # Version selector (root landing page of /boost/); reads versions.json
+├── versions.json           # Version folders the selector shows, newest first
 ├── home/                   # Insights homepage, served at the host root (not under /boost/)
+├── develop/                # Development dashboard, rewritten by the collector's nightly publish
 ├── v1.90/                  # Boost 1.90 analysis
 │   ├── index.html          # Main dashboard
 │   ├── bsl_analysis.html   # BSL-1.0 license analysis
@@ -17,9 +19,11 @@ This repository hosts comprehensive analysis and statistics of Boost C++ Library
 │       ├── algorithm.html
 │       ├── asio.html
 │       └── ...
-├── v1.91/                  # Boost 1.91 analysis (when available)
-│   └── ...
-└── _config.yml             # Jekyll configuration
+├── v1.91/, v1.92/          # Later releases, same layout
+├── Dockerfile              # Container that serves the site
+├── nginx.conf              # Its nginx configuration
+├── docker-compose.yml      # Container definition
+└── .github/                # Deploy, release-sync and freshness workflows, and verify-host.sh
 ```
 
 ## Homepage
@@ -28,50 +32,31 @@ This repository hosts comprehensive analysis and statistics of Boost C++ Library
 
 ## Adding a New Version
 
-When a new Boost version (e.g., 1.91) becomes available:
+New release versions appear automatically. `boost-release.yml` runs daily at 05:00 UTC, detects the latest production Boost tag (for example `boost-1.93.0`), copies `develop/` to `v1.93/`, rewrites `versions.json` and pushes. The selector reads `versions.json`, so no HTML edit is needed.
 
-1. **Create the version directory:**
-   ```bash
-   mkdir v1.91
-   ```
+A push made with the workflow's own token does not start `deploy.yml`. The new folder therefore goes live with the next data push, or immediately if you run **Actions → Deploy to GCP → Run workflow**.
 
-2. **Copy the structure from the previous version:**
-   ```bash
-   cp -r v1.90/* v1.91/
-   ```
+To add a version by hand:
 
-3. **Update the files in v1.91/** with new data:
-   - Update `index.html` with new statistics
-   - Update `bsl_analysis.html` with new BSL-1.0 data
-   - Update `data_to_release_note.html` with new release notes
-   - Update `dashboard_data.json` with new dashboard data
-   - Update all library detail pages in `libraries/` with new data
-
-4. **Update the root `index.html`:**
-   - Add a new version card for v1.91
-   - Mark it as "Latest" (remove "Latest" from previous version)
-   - Update the JavaScript `latestVersion` variable if auto-redirect is enabled
-
-5. **Update version references:**
-   - Search and replace version numbers in the new version's files
-   - Update any hardcoded version references (e.g., "Latest Version: 1.90.0" → "1.91.0")
+1. Copy `develop/` (or the previous version's folder) to `vX.YY/`.
+2. Update the files in `vX.YY/` with the new data and version numbers.
+3. Add `"vX.YY"` at the top of `versions` in `versions.json` and set `latest` to it.
+4. Commit and let the deploy publish it.
 
 ## File Organization
 
-- **Root `index.html`**: Landing page with version selector
-- **Version directories (`v1.90/`, `v1.91/`, etc.)**: Each contains a complete set of analysis pages for that version
-- **Library detail pages**: Located in `v{version}/libraries/` directory
+- **Root `index.html`**: landing page with the version selector.
+- **Version directories (`v1.90/`, `v1.91/`, etc.)**: each contains a complete set of analysis pages for that version.
+- **Library detail pages**: located in `vX.YY/libraries/`.
 
 ## Navigation
 
-- Users land on the root `index.html` and select a version
-- Within each version, navigation links are relative (no version prefix needed)
-- Library pages link back to their version's dashboard using `../index.html`
-- All version pages include a "Back to Version Selector" link
+- Users land on the root `index.html` and select a version.
+- Within each version, navigation links are relative (no version prefix needed).
+- Library pages link back to their version's dashboard using `../index.html`.
+- All version pages include a "Back to Version Selector" link.
 
 ## Notes
 
-- All internal links within a version directory use relative paths
-- The root index.html uses absolute paths with version prefixes (e.g., `v1.90/index.html`)
-- When adding new versions, ensure all links are updated correctly
-
+- All internal links within a version directory use relative paths.
+- The selector builds its links from `versions.json` (for example `v1.90/index.html`).
