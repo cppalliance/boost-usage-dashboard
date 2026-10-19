@@ -12,7 +12,8 @@
 #
 # Needs bash and curl. jq is optional: without it the structure of versions.json
 # is not checked. The exit status is the number of failed checks (255 at most),
-# so 0 means everything passed.
+# so 0 means everything passed. A request that fails or is cut short is a failed
+# check, never a pass.
 
 set -u
 
@@ -54,13 +55,31 @@ fail() {
   printf 'FAIL  %s\n' "$1"
 }
 
-fetch_status() { curl -s -o /dev/null -w '%{http_code}' --max-time 30 "$BASE$1"; }
+# A request that fails must never pass a check. After a response that is cut short
+# curl can still print the status code it received, so every helper below looks
+# at curl's exit status first.
 
-fetch_body() { curl -s --max-time 30 "$BASE$1"; }
+# Prints the HTTP status, or "request-failed" when the transfer did not complete.
+fetch_status() {
+  local code
+  code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 30 "$BASE$1") || {
+    printf 'request-failed'
+    return
+  }
+  printf '%s' "$code"
+}
 
-# Prints the first value of a response header, without the carriage return.
+# Prints the body of a page that answered with a success status. Fails, and prints
+# nothing, when the transfer fails or the status is an error, so a page that could
+# not be read never satisfies a check that wants some text to be absent.
+fetch_body() { curl -sf --max-time 30 "$BASE$1"; }
+
+# Prints the first value of a response header, without the carriage return. Fails
+# when the request fails; prints nothing when the header is absent.
 fetch_header() {
-  curl -s -I --max-time 30 "$BASE$1" | tr -d '\r' | grep -i "^$2:" | head -n 1 | sed 's/^[^:]*:[[:space:]]*//'
+  local headers
+  headers=$(curl -s -I --max-time 30 "$BASE$1") || return 1
+  printf '%s\n' "$headers" | tr -d '\r' | grep -i "^$2:" | head -n 1 | sed 's/^[^:]*:[[:space:]]*//'
 }
 
 # expect_status <path> <status>
@@ -80,25 +99,41 @@ expect_status_in() {
 # expect_header <path> <name> <value>
 expect_header() {
   local got
-  got=$(fetch_header "$1" "$2")
+  got=$(fetch_header "$1" "$2") || {
+    fail "$1 could not be fetched"
+    return
+  }
   if [ "$got" = "$3" ]; then pass "$1 sends $2: $got"; else fail "$1 sends $2: '$got', want '$3'"; fi
 }
 
 # expect_no_header <path> <name>
 expect_no_header() {
   local got
-  got=$(fetch_header "$1" "$2")
+  got=$(fetch_header "$1" "$2") || {
+    fail "$1 could not be fetched"
+    return
+  }
   if [ -z "$got" ]; then pass "$1 sends no $2"; else fail "$1 sends $2: '$got', want none"; fi
 }
 
 # expect_body_has <path> <fixed string> <what>
 expect_body_has() {
-  if fetch_body "$1" | grep -qF -- "$2"; then pass "$1 $3"; else fail "$1 does not $3"; fi
+  local body
+  body=$(fetch_body "$1") || {
+    fail "$1 could not be fetched"
+    return
+  }
+  if grep -qF -- "$2" <<<"$body"; then pass "$1 $3"; else fail "$1 does not $3"; fi
 }
 
 # expect_body_lacks <path> <extended regex> <what>
 expect_body_lacks() {
-  if fetch_body "$1" | grep -qiE -- "$2"; then fail "$1 has $3"; else pass "$1 has no $3"; fi
+  local body
+  body=$(fetch_body "$1") || {
+    fail "$1 could not be fetched"
+    return
+  }
+  if grep -qiE -- "$2" <<<"$body"; then fail "$1 has $3"; else pass "$1 has no $3"; fi
 }
 
 echo "Checking $BASE as $ENVIRONMENT"
@@ -109,24 +144,34 @@ for path in / /assets/home.css /assets/home.js /assets/logo.svg /robots.txt \
   expect_status "$path" 200
 done
 
-# Every version listed in versions.json must have a dashboard.
-versions=$(fetch_body /boost/versions.json | grep -oE '"v[0-9]+\.[0-9]+"' | tr -d '"' | sort -u)
-if [ -z "$versions" ]; then
-  fail "/boost/versions.json lists no versions"
+# Every version listed in versions.json must have a dashboard. Only the entries of
+# the "versions" array count: "latest" is not a source of folders, and an empty
+# array means there are no versions.
+versions=""
+versions_ok=0
+if versions_json=$(fetch_body /boost/versions.json); then
+  versions_ok=1
+  versions=$(printf '%s' "$versions_json" | tr -d '\r\n' |
+    sed -n 's/.*"versions"[[:space:]]*:[[:space:]]*\[\([^]]*\)\].*/\1/p' |
+    grep -oE '"v[0-9]+\.[0-9]+"' | tr -d '"' | sort -u)
+  [ -n "$versions" ] || fail "/boost/versions.json lists no versions"
 else
-  for version in $versions; do
-    expect_status "/boost/$version/index.html" 200
-  done
+  fail "/boost/versions.json could not be fetched"
 fi
+for version in $versions; do
+  expect_status "/boost/$version/index.html" 200
+done
 
-if command -v jq >/dev/null 2>&1; then
-  if fetch_body /boost/versions.json | jq -e '(.versions | type == "array" and length > 0) and .latest == .versions[0] and .develop == true' >/dev/null 2>&1; then
-    pass "/boost/versions.json is well formed: latest is the first version and develop is true"
+if [ "$versions_ok" -eq 1 ]; then
+  if command -v jq >/dev/null 2>&1; then
+    if jq -e '(.versions | type == "array" and length > 0) and .latest == .versions[0] and .develop == true' <<<"$versions_json" >/dev/null 2>&1; then
+      pass "/boost/versions.json is well formed: latest is the first version and develop is true"
+    else
+      fail "/boost/versions.json is malformed, latest is not the first version or develop is not true"
+    fi
   else
-    fail "/boost/versions.json is malformed, latest is not the first version or develop is not true"
+    echo "skip  /boost/versions.json structure (jq is not installed)"
   fi
-else
-  echo "skip  /boost/versions.json structure (jq is not installed)"
 fi
 
 # Pages that must not exist: the homepage is never served under /boost/, and
