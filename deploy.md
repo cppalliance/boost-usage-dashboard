@@ -129,6 +129,8 @@ curl http://localhost:9102/
 
 You should receive the HTML content of `index.html`. If you see an nginx error page, check `docker logs boost-site`.
 
+The container publishes port 9102 on `127.0.0.1` only, so the host nginx and commands run on the VM can reach it and nothing else can. `docker port boost-site` should print `80/tcp -> 127.0.0.1:9102`.
+
 ---
 
 ## Part 3 — Host nginx Configuration (one-time)
