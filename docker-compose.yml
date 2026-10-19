@@ -3,7 +3,8 @@ services:
     build: .
     container_name: boost-site
     ports:
-      - "9102:80"
+      # Loopback only: the host nginx is the one client of this port.
+      - "127.0.0.1:9102:80"
     volumes:
       - /opt/boost:/usr/share/nginx/html:ro
     restart: unless-stopped
